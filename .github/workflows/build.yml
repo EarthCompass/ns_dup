@@ -1,0 +1,90 @@
+name: release
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*"
+      - "test-release"      
+env:
+  GITHUB_TOKEN: ${{ github.token }}
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: write
+  
+jobs:
+  test:
+    name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os_name: Linux-x86_64
+            os: ubuntu-20.04
+            target: x86_64-unknown-linux-musl
+            bin: ns_dup
+          - os_name: Linux-aarch64
+            os: ubuntu-20.04
+            target: aarch64-unknown-linux-musl
+            bin: ns_dup
+          - os_name: Linux-arm
+            os: ubuntu-20.04
+            target: arm-unknown-linux-musleabi
+            bin: ns_dup
+          - os_name: Linux-i686
+            os: ubuntu-20.04
+            target: i686-unknown-linux-musl
+            bin: ns_dup
+          - os_name: Linux-mips
+            os: ubuntu-20.04
+            target: mips-unknown-linux-musl
+            bin: ns_dup
+          - os_name: Linux-mipsel
+            os: ubuntu-20.04
+            target: mipsel-unknown-linux-musl
+            bin: ns_dup
+          - os_name: Linux-mips64
+            os: ubuntu-20.04
+            target: mips64-unknown-linux-muslabi64
+            bin: ns_dup
+          - os_name: Linux-mips64el
+            os: ubuntu-20.04
+            target: mips64el-unknown-linux-muslabi64
+            bin: ns_dup
+          - os_name: Linux-riscv64
+            os: ubuntu-20.04
+            target: riscv64gc-unknown-linux-gnu
+            bin: ns_dup
+        toolchain:
+          - stable
+          # - beta
+          # - nightly
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "build"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: "--locked --release"
+          strip: true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ns_dup-${{ matrix.platform.os_name }}
+          path: target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+        if: matrix.toolchain == 'stable' && github.ref == 'refs/tags/test-release'
+      - name: Publish GitHub release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+          asset_name: ns_dup-${{ matrix.platform.os_name }}
+          tag: ${{ github.ref }}
+        if: matrix.toolchain == 'stable' && startsWith( github.ref, 'refs/tags/v' )
