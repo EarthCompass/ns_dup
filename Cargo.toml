@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nix = {version = "0.28.0", features = ["socket","net"]}
+nix = {version = "0.28.0", features = ["socket","net","process"]}
 pnet = {version = "*"}
+neli = {version= "0.6.5"}
 
 [profile.release]
 lto = "fat"

@@ -1,6 +1,5 @@
 use std::net::SocketAddrV6;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
-use std::process::Command;
 use nix::{errno::Errno, libc, libc::*, sys::socket};
 use nix::sys::socket::{LinkAddr, MsgFlags, SockaddrIn6};
 use pnet::packet::{icmpv6, Packet};
@@ -130,10 +129,9 @@ fn main() {
             );
             ns.set_checksum(0xffff);
 
-            // Dirty hack to send packet to the correct interface
-            Command::new("sh").arg("-c").arg(format!("ip -6 route add {} dev {} metric 1023",ns.get_target_addr().to_string(),lan_name)).output().unwrap();
+            route_nl::mod_route(ns.get_target_addr(), lan_iface.index as i32, true).unwrap();
             socket::sendto(ping_fd.as_raw_fd(), ns.packet(),&dest, MsgFlags::empty()).unwrap();
-            Command::new("sh").arg("-c").arg(format!("ip -6 route del {} dev {} metric 1023",ns.get_target_addr().to_string(),lan_name)).output().unwrap();
+            route_nl::mod_route(ns.get_target_addr(), lan_iface.index as i32, false).unwrap();
             // println!("{:?}",ns)
         }
 
